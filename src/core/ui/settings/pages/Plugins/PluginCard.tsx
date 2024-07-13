@@ -5,10 +5,10 @@ import { BunnyPlugin, getSettings, startPlugin, stopPlugin } from "@lib/managers
 import { showSheet } from "@lib/ui/sheets";
 import { lazyDestructure } from "@lib/utils/lazy";
 import { findByProps } from "@metro";
-import { NavigationNative, tokens } from "@metro/common";
+import { AsyncUsers, NavigationNative, Profiles, tokens, Users } from "@metro/common";
 import { Card, IconButton, Stack, TableSwitch, Text } from "@metro/common/components";
-import { createContext, useContext } from "react";
-import { Image, View } from "react-native";
+import { createContext, ReactNode, useContext } from "react";
+import { Image, TouchableOpacity, View } from "react-native";
 
 import { usePluginCardStyles } from "./usePluginCardStyles";
 
@@ -18,20 +18,42 @@ const usePlugin = () => useContext(PluginContext);
 
 function Authors() {
     const plugin = usePlugin();
-    const children = ["by "];
+    const children: ReactNode[] = ["by "];
+
+    const handlePress = (authorId: string | undefined) => {
+        if (authorId) {
+            console.log(`Pressed on author with ID: ${authorId}`);
+            if (!Users.getUser(authorId)) {
+                AsyncUsers.fetchProfile(authorId).then(() => {
+                    Profiles.showUserProfile({ userId: authorId });
+                });
+            } else {
+                Profiles.showUserProfile({ userId: authorId });
+            }
+        } else {
+            console.log("Pressed on author with no ID");
+        }
+    };
 
     for (const author of plugin.manifest.authors) {
-        children.push(author.name);
+        children.push(
+            <TouchableOpacity key={author.name} onPress={() => handlePress(author.id)}>
+                <Text variant="text-md/semibold" color="text-muted">
+                    {author.name}
+                </Text>
+            </TouchableOpacity>
+        );
         children.push(", ");
     }
 
-    children.pop();
+    children.pop(); // Remove the last comma
 
-    return <Text variant="text-md/semibold" color="text-muted">
-        {children}
-    </Text>;
+    return (
+        <Text variant="text-md/semibold" color="text-muted">
+            {children}
+        </Text>
+    );
 }
-
 function Title() {
     const styles = usePluginCardStyles();
     const plugin = usePlugin();

@@ -17,6 +17,9 @@ export const messageUtil = findByPropsProxy("sendBotMessage");
 export const navigationStack = findByPropsProxy("createStackNavigator");
 export const NavigationNative = findByPropsProxy("NavigationContainer");
 export const tokens = findByPropsProxy("colors", "unsafe_rawColors");
+export const Users = findByPropsProxy("getCurrentUser");
+export const Profiles = findByPropsProxy("showUserProfile");
+export const AsyncUsers = findByPropsProxy("getUser", "fetchProfile");
 
 // Flux
 export const Flux = findByPropsProxy("connectStores");
