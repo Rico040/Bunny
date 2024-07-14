@@ -8,7 +8,7 @@ import { findByProps } from "@metro";
 import { AsyncUsers, NavigationNative, Profiles, tokens, Users } from "@metro/common";
 import { Card, IconButton, Stack, TableSwitch, Text } from "@metro/common/components";
 import { createContext, ReactNode, useContext } from "react";
-import { Image, TouchableOpacity, View } from "react-native";
+import { Image, View } from "react-native";
 
 import { usePluginCardStyles } from "./usePluginCardStyles";
 
@@ -22,7 +22,6 @@ function Authors() {
 
     const handlePress = (authorId: string | undefined) => {
         if (authorId) {
-            console.log(`Pressed on author with ID: ${authorId}`);
             if (!Users.getUser(authorId)) {
                 AsyncUsers.fetchProfile(authorId).then(() => {
                     Profiles.showUserProfile({ userId: authorId });
@@ -30,23 +29,17 @@ function Authors() {
             } else {
                 Profiles.showUserProfile({ userId: authorId });
             }
-        } else {
-            console.log("Pressed on author with no ID");
         }
     };
 
     for (const author of plugin.manifest.authors) {
         children.push(
-            <TouchableOpacity key={author.name} onPress={() => handlePress(author.id)}>
-                <Text variant="text-md/semibold" color="text-muted">
-                    {author.name}
-                </Text>
-            </TouchableOpacity>
+            <Text variant="text-md/semibold" color="text-muted" onPress={() => handlePress(author.id)}>{author.name}</Text>
         );
         children.push(", ");
     }
 
-    children.pop(); // Remove the last comma
+    children.pop();
 
     return (
         <Text variant="text-md/semibold" color="text-muted">
