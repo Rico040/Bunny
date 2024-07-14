@@ -54,20 +54,14 @@ function Title() {
     const iconName = plugin.manifest.vendetta?.icon;
     const icon = iconName && requireAssetIndex(iconName);
 
-    return <Text
-        numberOfLines={1}
-        variant="heading-lg/semibold"
-    >
-        {icon && <>
-            {/* TODO: Image appears invisible for some devices/installs */}
-            <Image
-                style={styles.smallIcon}
-                source={icon}
-            />
-            {" "}
-        </>}
-        {plugin.manifest.name}
-    </Text>;
+    // Wrapping view shouldn't ever happen but it did so fuck it, i hate react
+    return <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {icon && <Image
+            style={[styles.smallIcon, { marginRight: 4 }]}
+            source={icon}
+        />}
+        <Text numberOfLines={1} variant="heading-lg/semibold">{plugin.manifest.name}</Text>
+    </View>;
 }
 
 // TODO: Wrap in a Card-ish component with red bg
