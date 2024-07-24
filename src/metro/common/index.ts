@@ -19,6 +19,9 @@ export const navigationStack = findByPropsLazy("createStackNavigator");
 export const NavigationNative = findByPropsLazy("NavigationContainer");
 export const tokens = findByPropsLazy("colors", "unsafe_rawColors");
 export const semver = findByPropsLazy("parse", "clean");
+export const Users = findByPropsLazy("getCurrentUser");
+export const Profiles = findByPropsLazy("showUserProfile");
+export const AsyncUsers = findByPropsLazy("getUser", "fetchProfile");
 
 // Flux
 export const Flux = findByPropsLazy("connectStores");

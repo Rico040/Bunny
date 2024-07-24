@@ -5,9 +5,9 @@ import { useProxy } from "@lib/api/storage";
 import { showSheet } from "@lib/ui/sheets";
 import { lazyDestructure } from "@lib/utils/lazy";
 import { findByProps } from "@metro";
-import { NavigationNative } from "@metro/common";
+import { AsyncUsers, NavigationNative, Profiles, Users } from "@metro/common";
 import { Card, IconButton, Stack, TableSwitch, Text } from "@metro/common/components";
-import { createContext, memo, useContext } from "react";
+import { createContext, memo, ReactNode,useContext } from "react";
 import { Image, View } from "react-native";
 
 import { usePluginCardStyles } from "./usePluginCardStyles";
