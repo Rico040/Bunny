@@ -5,11 +5,11 @@ import patcher from "@lib/api/patcher";
 import * as storage from "@lib/api/storage";
 import { createStorage } from "@lib/api/storage";
 import * as debug from "@lib/debug";
-import * as plugins from "@lib/managers/plugins";
 import * as themes from "@lib/managers/themes";
 import { loaderConfig, settings } from "@lib/settings";
 import * as utils from "@lib/utils";
-import { logModule } from "@lib/utils/logger";
+import { cyrb64Hash } from "@lib/utils/cyrb64";
+import { DiscordLogger } from "@lib/utils/logger";
 import * as metro from "@metro";
 import * as common from "@metro/common";
 import { Forms } from "@metro/common/components";
@@ -19,10 +19,13 @@ import * as color from "@ui/color";
 import * as components from "@ui/components";
 import { createThemedStyleSheet } from "@ui/styles";
 import * as toasts from "@ui/toasts";
+import { omit } from "es-toolkit";
 import { createElement, useEffect } from "react";
 import { View } from "react-native";
 
-export async function createVdPluginObject(plugin: plugins.BunnyPlugin) {
+import { VdPluginManager, VendettaPlugin } from "./plugins";
+
+export async function createVdPluginObject(plugin: VendettaPlugin) {
     return {
         ...window.vendetta,
         plugin: {
@@ -31,7 +34,7 @@ export async function createVdPluginObject(plugin: plugins.BunnyPlugin) {
             // Wrapping this with wrapSync is NOT an option.
             storage: await createStorage<Record<string, any>>(storage.createMMKVBackend(plugin.id)),
         },
-        logger: new logModule(`Bunny » ${plugin.manifest.name}`),
+        logger: new DiscordLogger(`Bunny » ${plugin.manifest.name}`),
     };
 }
 
@@ -111,10 +114,10 @@ export const initVendettaObject = (): any => {
                 FluxDispatcher: common.FluxDispatcher,
                 React: common.React,
                 ReactNative: common.ReactNative,
-                moment: common.moment,
-                chroma: common.chroma,
-                lodash: common.lodash,
-                util: common.util
+                moment: require("moment"),
+                chroma: require("chroma-js"),
+                lodash: require("lodash"),
+                util: require("util")
             }
         },
         constants: {
@@ -132,7 +135,7 @@ export const initVendettaObject = (): any => {
             findInTree: (tree: any, filter: any, options: any) => utils.findInTree(tree, filter, options),
             safeFetch: (input: RequestInfo | URL, options?: RequestInit | undefined, timeout?: number | undefined) => utils.safeFetch(input, options, timeout),
             unfreeze: (obj: object) => Object.isFrozen(obj) ? ({ ...obj }) : obj,
-            without: (object: any, ...keys: any) => utils.without(object, ...keys)
+            without: (object: any, ...keys: any) => omit(object, keys)
         },
         debug: {
             connectToDebugger: (url: string) => debug.connectToDebugger(url),
@@ -161,22 +164,22 @@ export const initVendettaObject = (): any => {
             },
             assets: {
                 all: assets.assetsMap,
-                find: (filter: (a: any) => void) => assets.findAsset(filter),
-                getAssetByName: (name: string) => assets.requireAssetByName(name),
-                getAssetByID: (id: number) => assets.requireAssetByIndex(id),
-                getAssetIDByName: (name: string) => assets.requireAssetIndex(name)
+                find: (filter: (a: any) => boolean) => assets.findAsset(filter),
+                getAssetByName: (name: string) => assets.findAsset(name),
+                getAssetByID: (id: number) => assets.findAsset(id),
+                getAssetIDByName: (name: string) => assets.findAssetId(name)
             },
             semanticColors: color.semanticColors,
             rawColors: color.rawColors
         },
         plugins: {
-            plugins: plugins.plugins,
-            fetchPlugin: (id: string) => plugins.fetchPlugin(id),
-            installPlugin: (id: string, enabled?: boolean | undefined) => plugins.installPlugin(id, enabled),
-            startPlugin: (id: string) => plugins.startPlugin(id),
-            stopPlugin: (id: string, disable?: boolean | undefined) => plugins.stopPlugin(id, disable),
-            removePlugin: (id: string) => plugins.removePlugin(id),
-            getSettings: (id: string) => plugins.getSettings(id)
+            plugins: VdPluginManager.plugins,
+            fetchPlugin: (source: string) => VdPluginManager.fetchPlugin(source),
+            installPlugin: (source: string, enabled = true) => VdPluginManager.installPlugin(source, enabled),
+            startPlugin: (id: string) => VdPluginManager.startPlugin(id),
+            stopPlugin: (id: string, disable = true) => VdPluginManager.stopPlugin(id, disable),
+            removePlugin: (id: string) => VdPluginManager.removePlugin(id),
+            getSettings: (id: string) => VdPluginManager.getSettings(id)
         },
         themes: {
             themes: themes.themes,
@@ -195,7 +198,7 @@ export const initVendettaObject = (): any => {
             useProxy: (_storage: any) => storage.useProxy(_storage),
             createStorage: (backend: any) => storage.createStorage(backend),
             wrapSync: (store: any) => storage.wrapSync(store),
-            awaitSyncWrapper: (store: any) => storage.awaitSyncWrapper(store),
+            awaitSyncWrapper: (store: any) => storage.awaitStorage(store),
             createMMKVBackend: (store: string) => storage.createMMKVBackend(store),
             createFileBackend: (file: string) => {
                 // Redirect path to vendetta_theme.json
@@ -227,33 +230,4 @@ export const initVendettaObject = (): any => {
     };
 
     return () => api.unload();
-};
-
-// cyrb53 (c) 2018 bryc (github.com/bryc). License: Public domain. Attribution appreciated.
-// A fast and simple 64-bit (or 53-bit) string hash function with decent collision resistance.
-// Largely inspired by MurmurHash2/3, but with a focus on speed/simplicity.
-// See https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript/52171480#52171480
-// https://github.com/bryc/code/blob/master/jshash/experimental/cyrb53.js
-const cyrb64 = (str: string, seed = 0) => {
-    let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
-    for (let i = 0, ch; i < str.length; i++) {
-        ch = str.charCodeAt(i);
-        h1 = Math.imul(h1 ^ ch, 2654435761);
-        h2 = Math.imul(h2 ^ ch, 1597334677);
-    }
-    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
-    h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
-    h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-    // For a single 53-bit numeric return value we could return
-    // 4294967296 * (2097151 & h2) + (h1 >>> 0);
-    // but we instead return the full 64-bit value:
-    return [h2 >>> 0, h1 >>> 0];
-};
-
-// An improved, *insecure* 64-bit hash that's short, fast, and has no dependencies.
-// Output is always 14 characters.
-const cyrb64Hash = (str: string, seed = 0) => {
-    const [h2, h1] = cyrb64(str, seed);
-    return h2.toString(36).padStart(7, "0") + h1.toString(36).padStart(7, "0");
 };

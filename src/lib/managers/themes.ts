@@ -6,14 +6,14 @@ import { allSettled } from "@core/polyfills/allSettled";
 import { getStoredTheme, getThemeFilePath } from "@lib/api/native/loader";
 import { ThemeManager } from "@lib/api/native/modules";
 import { after, before, instead } from "@lib/api/patcher";
-import { awaitSyncWrapper, createFileBackend, createMMKVBackend, createStorage, wrapSync } from "@lib/api/storage";
+import { awaitStorage, createFileBackend, createMMKVBackend, createStorage, wrapSync } from "@lib/api/storage";
 import { findInReactTree, safeFetch } from "@lib/utils";
 import { lazyDestructure, proxyLazy } from "@lib/utils/lazy";
 import { Author } from "@lib/utils/types";
-import { chroma } from "@metro/common";
 import { byMutableProp } from "@metro/filters";
-import { createFindProxy } from "@metro/proxy";
-import { findByNameProxy, findByProps, findByPropsProxy, findByStoreNameProxy } from "@metro/utils";
+import { createLazyModule } from "@metro/lazy";
+import { findByNameLazy, findByProps, findByPropsLazy, findByStoreNameLazy } from "@metro/utils";
+import chroma from "chroma-js";
 import { ImageBackground, Platform, processColor } from "react-native";
 
 export interface ThemeData {
@@ -42,7 +42,7 @@ export interface Theme {
 
 //! As of 173.10, early-finding this does not work.
 // Somehow, this is late enough, though?
-export const color = findByPropsProxy("SemanticColor");
+export const color = findByPropsLazy("SemanticColor");
 
 const mmkvStorage = proxyLazy(() => {
     const newModule = findByProps("impl");
@@ -50,12 +50,12 @@ const mmkvStorage = proxyLazy(() => {
     return findByProps("storage");
 });
 
-const appearanceManager = findByPropsProxy("updateTheme");
-const ThemeStore = findByStoreNameProxy("ThemeStore");
-const formDividerModule = findByPropsProxy("DIVIDER_COLORS");
-const MessagesWrapperConnected = findByNameProxy("MessagesWrapperConnected", false);
+const appearanceManager = findByPropsLazy("updateTheme");
+const ThemeStore = findByStoreNameLazy("ThemeStore");
+const formDividerModule = findByPropsLazy("DIVIDER_COLORS");
+const MessagesWrapperConnected = findByNameLazy("MessagesWrapperConnected", false);
 const { MessagesWrapper } = lazyDestructure(() => findByProps("MessagesWrapper"));
-const isThemeModule = createFindProxy(byMutableProp("isThemeDark"));
+const isThemeModule = createLazyModule(byMutableProp("isThemeDark"));
 
 export const themes = wrapSync(createStorage<Record<string, Theme>>(createMMKVBackend("VENDETTA_THEMES")));
 
@@ -230,7 +230,7 @@ export function getThemeFromLoader(): Theme | null {
 }
 
 export async function updateThemes() {
-    await awaitSyncWrapper(themes);
+    await awaitStorage(themes);
     const currentTheme = getThemeFromLoader();
     await allSettled(Object.keys(themes).map(id => fetchTheme(id, currentTheme?.id === id)));
 }

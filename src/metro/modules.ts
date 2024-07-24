@@ -1,6 +1,9 @@
-import { ExportsFlags, getMetroCache, indexBlacklistFlag, indexExportsFlags, ModulesMapInternal } from "@metro/caches";
+import { getMetroCache, indexBlacklistFlag, indexExportsFlags } from "@metro/caches";
 import { Metro } from "@metro/types";
-import { before, instead } from "spitroast";
+
+import { ModuleFlags, ModulesMapInternal } from "./enums";
+
+const { before, instead } = require("spitroast");
 
 export const metroModules: Metro.ModuleList = window.modules;
 const metroRequire: Metro.Require = window.__r;
@@ -20,14 +23,16 @@ for (const key in metroModules) {
     const metroModule = metroModules[id];
 
     const cache = getMetroCache().exportsIndex[id];
-    if (cache & ExportsFlags.BLACKLISTED) {
+    if (cache & ModuleFlags.BLACKLISTED) {
         blacklistModule(id);
         continue;
     }
 
     if (metroModule!.factory) {
         instead("factory", metroModule, ((args: Parameters<Metro.FactoryFn>, origFunc: Metro.FactoryFn) => {
+            const originalImportingId = _importingModuleId;
             _importingModuleId = id;
+
             const { 1: metroRequire, 4: moduleObject } = args;
 
             args[2 /* metroImportDefault */] = id => {
@@ -52,7 +57,7 @@ for (const key in metroModules) {
                 blacklistModule(id);
             }
 
-            _importingModuleId = -1;
+            _importingModuleId = originalImportingId;
         }) as any); // If only spitroast had better types
     }
 }
@@ -85,7 +90,7 @@ function onModuleRequire(moduleExports: any, id: Metro.ModuleID) {
 
     // There are modules registering the same native component
     if (moduleExports?.default?.name === "requireNativeComponent") {
-        instead("default", moduleExports, (args, origFunc) => {
+        instead("default", moduleExports, (args: any, origFunc: any) => {
             try {
                 return origFunc(...args);
             } catch {
@@ -110,7 +115,7 @@ function onModuleRequire(moduleExports: any, id: Metro.ModuleID) {
     }
 
     if (!patchedImportTracker && moduleExports.fileFinishedImporting) {
-        before("fileFinishedImporting", moduleExports, ([filePath]) => {
+        before("fileFinishedImporting", moduleExports, ([filePath]: [string]) => {
             if (_importingModuleId === -1 || !filePath) return;
             metroModules[_importingModuleId]!.__filePath = filePath;
         });
@@ -135,7 +140,7 @@ function onModuleRequire(moduleExports: any, id: Metro.ModuleID) {
 
     // Hindi timestamps moment
     if (moduleExports.isMoment) {
-        instead("defineLocale", moduleExports, (args, orig) => {
+        instead("defineLocale", moduleExports, (args: [string], orig: (lcl: string) => string) => {
             const origLocale = moduleExports.locale();
             orig(...args);
             moduleExports.locale(origLocale);
@@ -172,7 +177,7 @@ export function requireModule(id: Metro.ModuleID) {
         return metroRequire(id);
     }
 
-    // Disable Internal Metro error reporting logic
+    // Disable Internal RN error reporting logic
     const originalHandler = ErrorUtils.getGlobalHandler();
     ErrorUtils.setGlobalHandler(noopHandler);
 

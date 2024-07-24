@@ -1,4 +1,4 @@
-import { findByNameProxy } from "@metro/utils";
+import { findByNameLazy } from "@metro/utils";
 
 export type LoggerFunction = (...messages: any[]) => void;
 export interface Logger {
@@ -11,5 +11,5 @@ export interface Logger {
     verbose: LoggerFunction;
 }
 
-export const logModule = findByNameProxy("Logger");
-export const logger: Logger = new logModule("Bunny");
+export const DiscordLogger = findByNameLazy("Logger");
+export const logger: Logger = new DiscordLogger("Bunny");

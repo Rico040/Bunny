@@ -1,8 +1,9 @@
 import initFixes from "@core/fixes";
 import { initFetchI18nStrings } from "@core/i18n";
 import { initCorePlugins } from "@core/plugins";
-import { initVendettaObject } from "@core/polyfills/vendettaObject";
 import initSettings from "@core/ui/settings";
+import { initVendettaObject } from "@core/vendetta/api";
+import { VdPluginManager } from "@core/vendetta/plugins";
 import { patchCommands } from "@lib/api/commands";
 import { injectFluxInterceptor } from "@lib/api/flux";
 import { removeFile, writeFile } from "@lib/api/native/fs";
@@ -10,8 +11,8 @@ import { isPyonLoader, isThemeSupported } from "@lib/api/native/loader";
 import { FileManager } from "@lib/api/native/modules";
 import { patchLogHook } from "@lib/debug";
 import { updateFonts } from "@lib/managers/fonts";
-import { initPlugins } from "@lib/managers/plugins";
 import { initThemes, patchChatBackground } from "@lib/managers/themes";
+import { checkAndRegisterUpdates, initPlugins } from "@lib/plugins";
 import { logger } from "@lib/utils/logger";
 import initSafeMode from "@ui/safeMode";
 import { patchSettings } from "@ui/settings";
@@ -48,6 +49,7 @@ export default async () => {
         initFixes(),
         initSafeMode(),
         initCorePlugins(),
+        checkAndRegisterUpdates()
     ]).then(
         // Push them all to unloader
         u => u.forEach(f => f && lib.unload.push(f))
@@ -56,8 +58,12 @@ export default async () => {
     // Assign window object
     window.bunny = lib;
 
-    // Once done, load plugins
-    initPlugins().then(u => lib.unload.push(u));
+    // Once done, load Vendetta plugins
+    VdPluginManager.initPlugins()
+        .then(u => lib.unload.push(u))
+        .catch(() => alert("Failed to initialize Vendetta plugins"));
+
+    initPlugins();
 
     // Update the fonts
     updateFonts();

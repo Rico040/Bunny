@@ -1,26 +1,26 @@
 import { formatString, Strings } from "@core/i18n";
-import { requireAssetIndex } from "@lib/api/assets";
+import { VdPluginManager } from "@core/vendetta/plugins";
+import { findAssetId } from "@lib/api/assets";
 import { isThemeSupported } from "@lib/api/native/loader";
 import { after, instead } from "@lib/api/patcher";
-import { installPlugin } from "@lib/managers/plugins";
 import { installTheme } from "@lib/managers/themes";
-import { PROXY_PREFIX, THEMES_CHANNEL_ID } from "@lib/utils/constants";
+import { THEMES_CHANNEL_ID, VD_PROXY_PREFIX } from "@lib/utils/constants";
 import { lazyDestructure } from "@lib/utils/lazy";
 import { channels, url } from "@metro/common";
 import { byMutableProp } from "@metro/filters";
 import { findExports } from "@metro/finders";
-import { findByProps, findByPropsProxy } from "@metro/utils";
+import { findByProps, findByPropsLazy } from "@metro/utils";
 import { showConfirmationAlert } from "@ui/alerts";
 import { showToast } from "@ui/toasts";
 
 const showSimpleActionSheet = findExports(byMutableProp("showSimpleActionSheet"));
-const handleClick = findByPropsProxy("handleClick");
+const handleClick = findByPropsLazy("handleClick");
 const { openURL } = lazyDestructure(() => url);
 const { getChannelId } = lazyDestructure(() => channels);
 const { getChannel } = lazyDestructure(() => findByProps("getChannel"));
 
 function typeFromUrl(url: string) {
-    if (url.startsWith(PROXY_PREFIX)) {
+    if (url.startsWith(VD_PROXY_PREFIX)) {
         return "plugin";
     } else if (url.endsWith(".json") && isThemeSupported()) {
         return "theme";
@@ -28,12 +28,12 @@ function typeFromUrl(url: string) {
 }
 
 function installWithToast(type: "plugin" | "theme", url: string) {
-    (type === "plugin" ? installPlugin : installTheme)(url)
+    (type === "plugin" ? VdPluginManager.installPlugin.bind(VdPluginManager) : installTheme)(url)
         .then(() => {
-            showToast(Strings.SUCCESSFULLY_INSTALLED, requireAssetIndex("Check"));
+            showToast(Strings.SUCCESSFULLY_INSTALLED, findAssetId("Check"));
         })
         .catch((e: Error) => {
-            showToast(e.message, requireAssetIndex("Small"));
+            showToast(e.message, findAssetId("Small"));
         });
 }
 

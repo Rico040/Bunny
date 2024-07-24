@@ -1,6 +1,6 @@
 import { Strings } from "@core/i18n";
 import { CardWrapper } from "@core/ui/components/AddonCard";
-import { requireAssetIndex } from "@lib/api/assets";
+import { findAssetId } from "@lib/api/assets";
 import { BundleUpdaterManager } from "@lib/api/native/modules";
 import { useProxy } from "@lib/api/storage";
 import { FontDefinition, fonts, selectFont } from "@lib/managers/fonts";
@@ -9,8 +9,9 @@ import { TextStyleSheet } from "@lib/ui/styles";
 import { lazyDestructure } from "@lib/utils/lazy";
 import { ButtonColors } from "@lib/utils/types";
 import { findByProps } from "@metro";
-import { NavigationNative, Skia, tokens } from "@metro/common";
+import { NavigationNative, tokens } from "@metro/common";
 import { Button, Card, IconButton, Stack, Text } from "@metro/common/components";
+import * as Skia from "@shopify/react-native-skia";
 import { useMemo } from "react";
 import { View } from "react-native";
 
@@ -22,6 +23,7 @@ function FontPreview({ font }: { font: FontDefinition; }) {
     const TEXT_NORMAL = useToken(tokens.colors.TEXT_NORMAL);
     const { fontFamily: fontFamilyList, fontSize } = TextStyleSheet["text-md/medium"];
     const fontFamily = fontFamilyList!.split(/,/g)[0];
+
     const typeface = Skia.useFont(font.main[fontFamily])?.getTypeface();
 
     const paragraph = useMemo(() => {
@@ -89,7 +91,7 @@ export default function FontCard({ item: font }: CardWrapper<FontDefinition>) {
                                 size="sm"
                                 variant="secondary"
                                 disabled={selected}
-                                icon={requireAssetIndex("PencilIcon")}
+                                icon={findAssetId("PencilIcon")}
                             />
                             <Button
                                 size="sm"

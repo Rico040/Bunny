@@ -1,6 +1,6 @@
 import { Strings } from "@core/i18n";
 import { CardWrapper } from "@core/ui/components/AddonCard";
-import { requireAssetIndex } from "@lib/api/assets";
+import { findAssetId } from "@lib/api/assets";
 import { useProxy } from "@lib/api/storage";
 import { settings } from "@lib/settings";
 import { HTTP_REGEX_MULTI } from "@lib/utils/constants";
@@ -15,10 +15,11 @@ import { View } from "react-native";
 
 type SearchKeywords = Array<string | ((obj: any & {}) => string)>;
 
-interface AddonPageProps<T> {
+interface AddonPageProps<T extends object> {
     title: string;
     fetchFunction: (url: string) => Promise<void>;
-    items: Record<string, T & ({ id: string; } | { name: string; })>;
+    items: Record<string, any>;
+    resolveItem?: (value: any) => T | undefined;
     safeModeMessage: string;
     safeModeExtras?: JSX.Element | JSX.Element[];
     card: React.ComponentType<CardWrapper<T>>;
@@ -29,14 +30,16 @@ interface AddonPageProps<T> {
 // TODO: Move to somewhere else
 const { FlashList } = findByProps("FlashList");
 
-export default function AddonPage<T>({ card: CardComponent, ...props }: AddonPageProps<T>) {
+export default function AddonPage<T extends object>({ card: CardComponent, ...props }: AddonPageProps<T>) {
     useProxy(settings);
     useProxy(props.items);
 
     const [search, setSearch] = React.useState("");
 
     const items = useMemo(() => {
-        return Object.values(props.items).filter(i => typeof i === "object");
+        let values = Object.values(props.items);
+        if (props.resolveItem) values = values.map(props.resolveItem);
+        return values.filter(i => i && typeof i === "object");
     }, [props.items]);
 
     const data = useMemo(() => {
@@ -72,10 +75,10 @@ export default function AddonPage<T>({ card: CardComponent, ...props }: AddonPag
                 )}
             />
             <FloatingActionButton
-                icon={requireAssetIndex("PlusLargeIcon")}
+                icon={findAssetId("PlusLargeIcon")}
                 onPress={props.onFABPress ?? (() => {
                     // from ./InstallButton.tsx
-                    clipboard.getString().then(content =>
+                    clipboard.getString().then((content: string) =>
                         showInputAlert({
                             initialValue: content.match(HTTP_REGEX_MULTI)?.[0] ?? "",
                             placeholder: Strings.URL_PLACEHOLDER,

@@ -1,9 +1,10 @@
-// eslint-disable-next-line import-alias/import-alias
-import "../global.d.ts";
+import "../global.d.ts"; // eslint-disable-line import-alias/import-alias
+import "../modules.d.ts"; // eslint-disable-line import-alias/import-alias
 
 export * as api from "./api";
 export * as debug from "./debug";
 export * as managers from "./managers";
+export * as plugins from "./plugins";
 export * as settings from "./settings";
 export * as ui from "./ui";
 export * as utils from "./utils";

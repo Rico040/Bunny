@@ -6,13 +6,15 @@ import { settings } from "@lib/settings";
 import { lazyDestructure } from "@lib/utils/lazy";
 import { ButtonColors } from "@lib/utils/types";
 import { Button, CompatButton, SafeAreaView } from "@metro/common/components";
-import { findByNameProxy, findByProps } from "@metro/utils";
+import { _lazyContextSymbol } from "@metro/lazy";
+import { LazyModuleContext } from "@metro/types";
+import { findByNameLazy, findByProps } from "@metro/utils";
 import { semanticColors } from "@ui/color";
 import { Codeblock, ErrorBoundary as _ErrorBoundary } from "@ui/components";
 import { createThemedStyleSheet, TextStyleSheet } from "@ui/styles";
 import { Text, View } from "react-native";
 
-const ErrorBoundary = findByNameProxy("ErrorBoundary");
+const ErrorBoundary = findByNameLazy("ErrorBoundary");
 
 // Let's just pray they have this.
 const { BadgableTabBar } = lazyDestructure(() => findByProps("BadgableTabBar"));
@@ -68,7 +70,16 @@ const tabs: Tab[] = [
     { id: "componentStack", title: () => Strings.COMPONENT, trimWhitespace: true },
 ];
 
-export default () => after.proxy("render", [ErrorBoundary, r => r.prototype], function (this: any, _, ret) {
+function getErrorBoundaryContext() {
+    const ctxt: LazyModuleContext = findByNameLazy("ErrorBoundary")[_lazyContextSymbol];
+    return new Promise(resolve => {
+        ctxt.getExports(exp => {
+            resolve(exp.prototype);
+        });
+    });
+}
+
+export default () => after.await("render", getErrorBoundaryContext(), function (this: any, _, ret) {
     if (!this.state.error) return;
 
     // Not using setState here as we don't want to cause a re-render, we want this to be set in the initial render

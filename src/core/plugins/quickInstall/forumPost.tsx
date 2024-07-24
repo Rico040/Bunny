@@ -1,14 +1,14 @@
 import { Strings } from "@core/i18n";
-import { requireAssetIndex } from "@lib/api/assets";
+import { VdPluginManager } from "@core/vendetta/plugins";
+import { findAssetId } from "@lib/api/assets";
 import { isThemeSupported } from "@lib/api/native/loader";
 import { after } from "@lib/api/patcher";
 import { useProxy } from "@lib/api/storage";
-import { installPlugin, plugins, removePlugin } from "@lib/managers/plugins";
 import { installTheme, removeTheme, themes } from "@lib/managers/themes";
-import { DISCORD_SERVER_ID, HTTP_REGEX_MULTI, PLUGINS_CHANNEL_ID, PROXY_PREFIX, THEMES_CHANNEL_ID } from "@lib/utils/constants";
+import { DISCORD_SERVER_ID, HTTP_REGEX_MULTI, PLUGINS_CHANNEL_ID, THEMES_CHANNEL_ID, VD_PROXY_PREFIX } from "@lib/utils/constants";
 import { lazyDestructure } from "@lib/utils/lazy";
 import { Button } from "@metro/common/components";
-import { findByProps, findByPropsProxy } from "@metro/utils";
+import { findByProps, findByPropsLazy } from "@metro/utils";
 import { ErrorBoundary } from "@ui/components";
 import { showToast } from "@ui/toasts";
 
@@ -17,15 +17,15 @@ type PostType = "Plugin" | "Theme";
 // const ForumPostLongPressActionSheet = findByNameProxy("ForumPostLongPressActionSheet", false);
 // const { ActionSheetRow } = findByPropsProxy("ActionSheetRow");
 const { useFirstForumPostMessage } = lazyDestructure(() => findByProps("useFirstForumPostMessage"));
-const forumReactions = findByPropsProxy("MostCommonForumPostReaction");
+const forumReactions = findByPropsLazy("MostCommonForumPostReaction");
 
 const postMap = {
     Plugin: {
-        storage: plugins,
-        urlsFilter: (url: string) => url.startsWith(PROXY_PREFIX),
+        storage: VdPluginManager.plugins,
+        urlsFilter: (url: string) => url.startsWith(VD_PROXY_PREFIX),
         installOrRemove: (url: string) => {
             const isInstalled = postMap.Plugin.storage[url];
-            return isInstalled ? removePlugin(url) : installPlugin(url);
+            return isInstalled ? VdPluginManager.removePlugin(url) : VdPluginManager.installPlugin(url);
         }
     },
     Theme: {
@@ -63,7 +63,7 @@ function useExtractThreadContent(thread: any, _firstMessage = null, actionSheet 
 function useInstaller(thread: any, firstMessage = null, actionSheet = false): [true] | [false, PostType, boolean, boolean, () => Promise<void>] {
     const [postType, url] = useExtractThreadContent(thread, firstMessage, actionSheet) ?? [];
 
-    useProxy(plugins);
+    useProxy(VdPluginManager.plugins);
     useProxy(themes);
 
     const [isInstalling, setIsInstalling] = React.useState(false);
@@ -77,7 +77,7 @@ function useInstaller(thread: any, firstMessage = null, actionSheet = false): [t
         try {
             await postMap[postType].installOrRemove(url);
         } catch (e: any) {
-            showToast(e.message, requireAssetIndex("Small"));
+            showToast(e.message, findAssetId("Small"));
         } finally {
             setIsInstalling(false);
         }
@@ -119,7 +119,7 @@ const installButtonPatch = () => after("MostCommonForumPostReaction", forumReact
                 variant={installed ? "secondary" : "primary"}
                 text={installed ? Strings.UNINSTALL : Strings.INSTALL}
                 onPress={installOrRemove}
-                icon={requireAssetIndex(installed ? "ic_message_delete" : "DownloadIcon")}
+                icon={findAssetId(installed ? "ic_message_delete" : "DownloadIcon")}
                 style={{ marginLeft: 8 }}
             />
         </ErrorBoundary>
