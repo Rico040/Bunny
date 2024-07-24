@@ -18,20 +18,35 @@ const usePlugin = () => useContext(PluginContext);
 
 function Authors() {
     const plugin = usePlugin();
-    const children = ["by "];
+    const children: ReactNode[] = ["by "];
+
+    const handlePress = (authorId: string | undefined) => {
+        if (authorId) {
+            if (!Users.getUser(authorId)) {
+                AsyncUsers.fetchProfile(authorId).then(() => {
+                    Profiles.showUserProfile({ userId: authorId });
+                });
+            } else {
+                Profiles.showUserProfile({ userId: authorId });
+            }
+        }
+    };
 
     for (const author of plugin.manifest.authors) {
-        children.push(author.name);
+        children.push(
+            <Text variant="text-md/semibold" color="text-muted" onPress={() => handlePress(author.id)}>{author.name}</Text>
+        );
         children.push(", ");
     }
 
     children.pop();
 
-    return <Text variant="text-md/semibold" color="text-muted">
-        {children}
-    </Text>;
+    return (
+        <Text variant="text-md/semibold" color="text-muted">
+            {children}
+        </Text>
+    );
 }
-
 function Title() {
     const styles = usePluginCardStyles();
     const plugin = usePlugin();
